@@ -73,11 +73,15 @@
         // Prevent division by zero if no valid credit points found
         if (!totalCP) return;
 
-        // Calculate WAM
-        const wam = (totalMarks / totalCP).toFixed(2);
+        // Set to show nothing if no WAM or Grade detected
+        let wam = "No WAM Score Yet";
+        let grade = "No Grade Yet";
 
-        // Determine grade based on WAM
-        const grade = getGrade(wam);
+        // If marks are above 0, calculate WAM and determine grade based on WAM
+        if (totalMarks > 0) {
+            wam = (totalMarks / totalCP).toFixed(2);
+            grade = getGrade(wam);
+        }
 
         // Create and display the WAM and grade UI
         const wamDisplay = createWAMDisplay(wam, grade);
