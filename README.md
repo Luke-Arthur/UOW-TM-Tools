@@ -8,16 +8,16 @@ UOW-TM-Tools is a collection of Tampermonkey scripts designed to enhance the use
 
 * **Moodle Popups** - Enhances Moodle by modifying popup behaviors for a more seamless navigation experience.
 * **SOLS Auto Read** - Automates the process of marking SOLS messages as read, saving time and effort.
+* **SOLS WAM Calculator** - Automatically calculate your WAM score and add it to SOLS
 
 ## Installation
 To utilize these scripts, follow the steps below:
 1. **Install Tampermonkey**: Tampermonkey is a browser extension that manages user scripts. Download and install it from [Tampermonkey's official website](https://www.tampermonkey.net/).​
 
 2. **Add the Scripts**:
-    -  **Moodle Popups**: Click on the [Moodle_Popups.js](https://github.com/gab706/UOW-TM-Tools/blob/production/Moodle_Popups.js) link to view the script. Then, click the "Raw" button to open the script in a new tab. Copy paste the script into Tampermonkey and save.
-    -  **SOLS Auto Read**: Similarly, click on the [SOLS_Auto_Read.js](https://github.com/gab706/UOW-TM-Tools/blob/production/SOLS_Auto_Read.js) link and follow the same steps to install this script.
+    - Click on the Script you wanna add. Then, click the "Raw" button to open the script in a new tab. Copy paste the script into Tampermonkey and save.
 
-3. **Activate the Scripts**: Ensure that the installed scripts are enabled in the Tampermonkey dashboard. They should now automatically run when you access the respective UOW systems.
+4. **Activate the Scripts**: Ensure that the installed scripts are enabled in the Tampermonkey dashboard. They should now automatically run when you access the respective UOW systems.
 
 ## Contributing
 Contributions are welcome! If you have suggestions for improvements or additional scripts, feel free to fork the repository and submit a pull request.​
