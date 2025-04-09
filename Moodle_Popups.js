@@ -1,53 +1,149 @@
 // ==UserScript==
-// @name         BLUE_MOODLE.ClosePopup() Hijacker
+// @name         BLUE_MOODLE Kill All Popups Toggle (with Block Counter)
 // @namespace    https://moodle.uowplatform.edu.au/
-// @version      1.3
-// @description  Hijacks ClosePopup to fully remove popups and overlays from UOW Moodle without reloading the page.
-// @author       Gabriel
+// @version      2.8
+// @description  Toggle to block Moodle popups with a persistent setting and live counter of blocked popups displayed on the button
+// @author       Luke
 // @match        https://moodle.uowplatform.edu.au/*
 // @grant        none
+// @run-at       document-idle
 // ==/UserScript==
 
 (() => {
     'use strict';
 
-    // Number of retries to wait for BLUE_MOODLE to load
-    let retries = 100;
+    const TOGGLE_KEY = 'popupVisibilityAllowed';
+    let popupBlockingEnabled = localStorage.getItem(TOGGLE_KEY) === 'false';
+    let popupBlockedCount = 0;
 
-    // Set up a repeating interval check every 100ms
-    const interval = setInterval(() => {
-        // Reference to the global BLUE_MOODLE object
-        const bm = window.BLUE_MOODLE;
+    const createHeaderToggleButton = () => {
+        const toggleItem = document.createElement('li');
+        toggleItem.className = 'rui-icon-menu-togglepopups';
 
-        // Exit if retries run out OR the required functions exist
-        if (!--retries || (bm?.ClosePopup && bm?.CommonPopUp)) {
-            // Stop further interval checks
-            clearInterval(interval);
+        const btn = document.createElement('button');
+        btn.id = "popup-toggle-btn";
+        btn.type = "button";
+        btn.title = "Click to toggle popup visibility";
+        btn.style.position = "relative";
+        btn.style.padding = "6px 12px";
+        btn.style.fontSize = "13px";
+        btn.style.border = "1px solid #ccc";
+        btn.style.borderRadius = "6px";
+        btn.style.margin = "4px";
+        btn.style.cursor = "pointer";
+        btn.style.color = "white";
 
-            // If the ClosePopup function exists on BLUE_MOODLE
-            if (bm?.ClosePopup) {
-                // Override the ClosePopup function
-                bm.ClosePopup = (id = "dvOuter") => {
-                    // Attempt to get the element by ID (default "dvOuter")
-                    const el = document.getElementById(id);
+        const badge = document.createElement('span');
+        badge.id = "popup-blocked-count";
+        badge.textContent = "0";
+        badge.style.position = "absolute";
+        badge.style.top = "-4px";
+        badge.style.right = "-6px";
+        badge.style.background = "#f44336";
+        badge.style.color = "white";
+        badge.style.fontSize = "10px";
+        badge.style.padding = "2px 5px";
+        badge.style.borderRadius = "50%";
+        badge.style.display = "none";
+        badge.style.minWidth = "18px";
+        badge.style.textAlign = "center";
 
-                    // If element not found, log a warning and exit
-                    if (!el) return console.warn(`[TM] Element '${id}' not found.`);
+        const updateButton = () => {
+            btn.textContent = `Popups: ${popupBlockingEnabled ? "OFF" : "ON"}`;
+            btn.style.background = popupBlockingEnabled ? "#e53935" : "#43a047";
 
-                    // Get the parent of the element
-                    const parent = el.parentNode;
+            // Reattach the badge (textContent overwrite removes it)
+            btn.appendChild(badge);
+        };
 
-                    // If the parent is the overlay container (dvOuter), remove the entire container
-                    if (parent?.id === "dvOuter") {
-                        parent.remove();
-                        console.log(`[TM] Removed popup container and overlay.`);
-                    } else {
-                        // Otherwise, remove just the specific element
-                        el.remove();
-                        console.log(`[TM] Removed popup element with id: ${id}`);
-                    }
-                };
-            }
+        btn.addEventListener("click", () => {
+            popupBlockingEnabled = !popupBlockingEnabled;
+            localStorage.setItem(TOGGLE_KEY, !popupBlockingEnabled); 
+            updateButton();
+            console.log(`[TM] Popups are now ${popupBlockingEnabled ? "BLOCKED (OFF)" : "ALLOWED (ON)"}`);
+        });
+
+        updateButton();
+        toggleItem.appendChild(btn);
+
+        const ul = document.querySelector('ul.rui-icon-menu.rui-icon-menu--right.ml-auto');
+        if (ul) {
+            ul.insertBefore(toggleItem, ul.firstChild);
+        } else {
+            console.warn("[TM] Header menu not found — can't insert popup toggle.");
         }
-    }, 100); // Retry interval: 100ms
+
+        return badge;
+    };
+
+    const observePopups = (badge) => {
+        const observer = new MutationObserver(mutations => {
+            if (!popupBlockingEnabled) return;
+
+            mutations.forEach(mutation => {
+                mutation.addedNodes.forEach(node => {
+                    if (node.nodeType !== 1) return;
+
+                    const el = node.closest?.("#dvOuter") || node.querySelector?.("#dvOuter");
+                    if (el) {
+                        el.remove();
+                        popupBlockedCount++;
+                        badge.textContent = popupBlockedCount;
+                        badge.style.display = "inline-block";
+                        console.log(`[TM] Popup #${popupBlockedCount} blocked`);
+                    }
+                });
+            });
+        });
+
+        observer.observe(document.body, { childList: true, subtree: true });
+    };
+
+    const overrideClosePopup = (bm, badge) => {
+        const original = bm.ClosePopup;
+        bm.ClosePopup = (id = "dvOuter") => {
+            const el = document.getElementById(id);
+            if (!el) return console.warn(`[TM] Element '${id}' not found.`);
+            if (popupBlockingEnabled) {
+                const parent = el.parentNode;
+                if (parent?.id === "dvOuter") {
+                    parent.remove();
+                } else {
+                    el.remove();
+                }
+                popupBlockedCount++;
+                badge.textContent = popupBlockedCount;
+                badge.style.display = "inline-block";
+                console.log(`[TM] Intercepted popup #${popupBlockedCount} with id: ${id}`);
+            } else {
+                original?.call(bm, id);
+                console.log(`[TM] Allowed popup (blocking off) for: ${id}`);
+            }
+        };
+    };
+
+	// Added to make sure that the script will run on Firefox
+    const waitForBM = (badge) => {
+        let attempts = 0;
+        const maxAttempts = 100;
+        const interval = setInterval(() => {
+            const bm = window.BLUE_MOODLE;
+            if (bm?.ClosePopup && bm?.CommonPopUp) {
+                clearInterval(interval);
+                overrideClosePopup(bm, badge);
+                console.log("[TM] BLUE_MOODLE.ClosePopup overridden.");
+            }
+            if (++attempts > maxAttempts) {
+                clearInterval(interval);
+                console.warn("[TM] BLUE_MOODLE never loaded.");
+            }
+        }, 200);
+    };
+	
+	//On load event listener
+    window.addEventListener('load', () => {
+        const badge = createHeaderToggleButton();
+        observePopups(badge);
+        waitForBM(badge);
+    });
 })();
