@@ -47,6 +47,7 @@
             return el;
         })();
 
+		// This Toast is a baller idea! solid work Gabriel.
         toast._text.textContent = msg;
         toast.style.opacity = "1";
         clearTimeout(toast._timeout);
